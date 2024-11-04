@@ -130,14 +130,17 @@
         }
 
         .message.self {
+            display: inline-block;
             background-color: #007bff;
             color: #fff;
             align-self: flex-end;
             margin-left: auto;
             /* Align to the right */
+
         }
 
         .message.other {
+            display: inline-block;
             background-color: #e0e0e0;
             color: #000;
             align-self: flex-start;
@@ -208,7 +211,11 @@
                 if ($chatbox.is(':hidden')) {
                     $chatbox.toggle();
                 }
-                const $messagerReceiverElement = $('<div></div>').text(data.content).addClass('message other');
+                const $messagerReceiverElement = `
+                    <div style ="display: flex;">
+                        <div class="message other">${data.content}</div>
+                    </div>
+                `;
                 $chatboxMessages.append($messagerReceiverElement);
                 scrollToBottom();
             });
@@ -219,8 +226,11 @@
                 const message = $input.val().trim();
                 if (message) {
                     // Thêm phần tử HTML tạm thời để hiển thị trạng thái "đang gửi"
-                    const $sendingMessageElement = $('<div></div>').text('Đang gửi...').addClass('message self sending');
-
+                    const $sendingMessageElement = `
+                                <div style ="display: flex;">
+                                    <div class="message self sending">Đang gửi...</div>
+                                </div>
+                            `;
                     $('#chatbox-messages').append($sendingMessageElement);
                     scrollToBottom();
 
@@ -229,15 +239,17 @@
                         sender_id: senderUser,
                         receiver_id: receiverUser
                     }, function(response) {
+                        $('.sending').remove();
                         if (response.status === true) {
                             // Cập nhật phần tử HTML tạm thời với nội dung tin nhắn thực
-                            $sendingMessageElement.text(message).removeClass('sending').css({
-                                'word-wrap': 'break-word'
-                            });
+                            const $sentMessageElement = `
+                                <div style ="display: flex;">
+                                    <div class="message self">${message}</div>
+                                </div>
+                            `;
+                            $('#chatbox-messages').append($sentMessageElement);
                             scrollToBottom();
                         } else {
-                            // Xóa phần tử HTML tạm thời nếu gửi tin nhắn thất bại
-                            $sendingMessageElement.remove();
                             // Thêm thông báo lỗi màu đỏ
                             const $errorMessageElement = $('<div></div>').text(response.message).addClass('message error');
                             $('#chatbox-messages').append($errorMessageElement);
