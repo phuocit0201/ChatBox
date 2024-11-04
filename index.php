@@ -261,6 +261,81 @@
                 }
             });
 
+            let limit = 20;
+            let loading = false;
+            let hasMoreMessages = true;
+
+            // Gọi API để lấy 20 tin nhắn mới nhất khi tải trang
+            fetchLatestMessages(limit);
+
+            $('#send-message-form').on('submit', function(event) {
+                event.preventDefault();
+                const message = $('#message-input').val();
+                if (message.trim() !== '') {
+                    $.post('http://localhost/Chat-Box/message-controller.php', {
+                        content: message,
+                        sender_id: senderUser,
+                        receiver_id: receiverUser
+                    }, function(response) {
+                        if (response.status === true) {
+                            const $sentMessageElement = `
+                                <div style="display: flex;">
+                                    <div class="message self">${message}</div>
+                                </div>
+                            `;
+                            $('#chatbox-messages').append($sentMessageElement);
+                            scrollToBottom();
+                        } else {
+                            const $errorMessageElement = $('<div></div>').text(response.message).addClass('message error');
+                            $('#chatbox-messages').append($errorMessageElement);
+                            scrollToBottom();
+                        }
+                    }, 'json');
+
+                    $('#message-input').val('');
+                }
+            });
+
+            $('#chatbox-messages').on('scroll', function() {
+                if ($(this).scrollTop() === 0 && !loading && hasMoreMessages) {
+                    loading = true;
+                    limit += 20;
+                    fetchLatestMessages(limit, function() {
+                        loading = false;
+                    });
+                }
+            });
+
+            function fetchLatestMessages(limit, callback) {
+                $.get('http://localhost/Chat-Box/get-messages.php', { 
+                    limit: limit, 
+                    receiver_id: $('#receiverUser').val(), 
+                    sender_id: $('#senderUser').val() 
+                }, function(response) {
+                    if (response.status === true) {
+                        $('#chatbox-messages').empty(); // Xóa các tin nhắn hiện tại
+                        if (response.messages.length < limit) {
+                            hasMoreMessages = false;
+                        }
+                        response.messages.forEach(function(message) {
+                            const self = message.sender_id == $('#senderUser').val() ? 'self' : 'other';
+                            const $messageElement = `
+                                <div style="display: flex;">
+                                    <div class="message ${self}">${message.content}</div>
+                                </div>
+                            `;
+                            $('#chatbox-messages').append($messageElement); // Thêm tin nhắn mới vào đầu danh sách
+                        });
+                        // scrollToBottom();
+                        $('#chatbox-messages').animate({ scrollTop: $('#chatbox-messages').scrollTop() + 100 }, 100);
+                    } else {
+                        const $errorMessageElement = $('<div></div>').text('Không thể tải tin nhắn').addClass('message error');
+                        $('#chatbox-messages').append($errorMessageElement);
+                    }
+                    if (callback) callback();
+                }, 'json');
+            }
+
             function scrollToBottom() {
                 const $chatboxMessages = $('#chatbox-messages');
                 $chatboxMessages.scrollTop($chatboxMessages[0].scrollHeight);
