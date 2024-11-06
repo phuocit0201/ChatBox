@@ -164,6 +164,24 @@
             margin-left: auto;
         }
 
+        .message-date--content {
+            text-align: center;
+            font-weight: bold;
+            color: #888;
+            font-size: 14px;
+            background-color: #f1f1f1;
+            padding: 5px 10px;
+            border-radius: 10px;
+        }
+
+        .message-date {
+            text-align: center;
+            font-weight: bold;
+            color: #888;
+            padding: 15px 0px;
+
+        }
+
         #message-icon {
             position: relative;
             display: inline-block;
@@ -348,14 +366,26 @@
                         if (response.messages.length < limit) {
                             hasMoreMessages = false;
                         }
+                        let lastDate = null;
                         response.messages.forEach(function(message) {
-                            const self = message.sender_id == $('#senderUser').val() ? 'self' : 'other';
+                            const messageDate = new Date(message.created_at);
+                            const messageDateString = messageDate.toLocaleDateString();
+                            if (lastDate !== messageDateString) {
+                                const $dateElement = `
+                                    <div class="message-date">
+                                     <span class="message-date--content">${messageDateString}</span>
+                                    </div>
+                                `;
+                                $('#chatbox-messages').append($dateElement);
+                                lastDate = messageDateString;
+                            }
+                            const self = message.sender_id == sender_id ? 'self' : 'other';
                             const $messageElement = `
                                 <div style="display: flex;">
                                     <div class="message ${self}">${message.content}</div>
                                 </div>
                             `;
-                            $('#chatbox-messages').append($messageElement); 
+                            $('#chatbox-messages').append($messageElement); // Thêm tin nhắn mới vào đầu danh sách
                             if (!message.is_read && message.sender_id == receiver_id && message.receiver_id == sender_id) {
                                 unreadCount++;
                             }
