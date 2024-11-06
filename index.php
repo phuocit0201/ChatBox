@@ -163,11 +163,35 @@
             align-self: flex-end;
             margin-left: auto;
         }
+
+        #message-icon {
+            position: relative;
+            display: inline-block;
+        }
+
+        #message-icon .fa-envelope {
+            font-size: 24px;
+        }
+
+        #unread-count {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background-color: red;
+            color: white;
+            border-radius: 50%;
+            padding: 5px 10px;
+            font-size: 12px;
+            display: none;
+        }
     </style>
 </head>
 
 <body>
-    <button id="toggle-chatbox"><i class="fas fa-comments"></i></button>
+    <button id="toggle-chatbox">
+        <i class="fas fa-comments"></i>
+        <span id="unread-count" class="badge"></span>
+    </button>
     <input type="text" id="senderUser" value="<?= $_GET['senderUser'] ?>">
     <input type="text" id="receiverUser" value="<?= $_GET['receiverUser'] ?>">
     <div id="chatbox">
@@ -183,6 +207,13 @@
     </div>
     <script>
         $(document).ready(function() {
+            var senderUser = $('#senderUser').val();
+            var receiverUser = $('#receiverUser').val();
+            var limit = 20;
+            var loading = false;
+            var hasMoreMessages = true;
+            var unreadCount = 0;
+
             const $chatbox = $('#chatbox');
             const $toggleChatbox = $('#toggle-chatbox');
             const $chatboxInput = $('#chatbox-input');
@@ -192,6 +223,7 @@
             $toggleChatbox.on('click', function() {
                 $chatbox.toggle();
                 scrollToBottom();
+                readMessage(senderUser, receiverUser)
             });
 
             $closeChatbox.on('click', function() {
@@ -204,13 +236,16 @@
                 cluster: 'ap1'
             });
 
-            var senderUser = $('#senderUser').val();
-            var receiverUser = $('#receiverUser').val();
+
             var channel = pusher.subscribe('chat-channel');
             channel.bind(`message-receiver-${senderUser}`, function(data) {
                 if ($chatbox.is(':hidden')) {
-                    $chatbox.toggle();
+                    unreadCount++;
+                    updateUnreadCount();
+                } else {
+                    readMessage(senderUser, receiverUser);
                 }
+                
                 const $messagerReceiverElement = `
                     <div style ="display: flex;">
                         <div class="message other">${data.content}</div>
@@ -227,10 +262,10 @@
                 if (message) {
                     // Thêm phần tử HTML tạm thời để hiển thị trạng thái "đang gửi"
                     const $sendingMessageElement = `
-                                <div style ="display: flex;">
-                                    <div class="message self sending">Đang gửi...</div>
-                                </div>
-                            `;
+                        <div style ="display: flex;">
+                            <div class="message self sending">Đang gửi...</div>
+                        </div>
+                    `;
                     $('#chatbox-messages').append($sendingMessageElement);
                     scrollToBottom();
 
@@ -261,12 +296,8 @@
                 }
             });
 
-            let limit = 20;
-            let loading = false;
-            let hasMoreMessages = true;
-
             // Gọi API để lấy 20 tin nhắn mới nhất khi tải trang
-            fetchLatestMessages(limit);
+            fetchLatestMessages(senderUser, receiverUser, limit);
 
             $('#send-message-form').on('submit', function(event) {
                 event.preventDefault();
@@ -300,17 +331,17 @@
                 if ($(this).scrollTop() === 0 && !loading && hasMoreMessages) {
                     loading = true;
                     limit += 20;
-                    fetchLatestMessages(limit, function() {
+                    fetchLatestMessages(senderUser, receiverUser, limit, function() {
                         loading = false;
                     });
                 }
             });
 
-            function fetchLatestMessages(limit, callback) {
+            function fetchLatestMessages(sender_id, receiver_id, limit, callback) {
                 $.get('http://localhost/Chat-Box/get-messages.php', { 
                     limit: limit, 
-                    receiver_id: $('#receiverUser').val(), 
-                    sender_id: $('#senderUser').val() 
+                    receiver_id: receiver_id, 
+                    sender_id: sender_id
                 }, function(response) {
                     if (response.status === true) {
                         $('#chatbox-messages').empty(); // Xóa các tin nhắn hiện tại
@@ -324,9 +355,12 @@
                                     <div class="message ${self}">${message.content}</div>
                                 </div>
                             `;
-                            $('#chatbox-messages').append($messageElement); // Thêm tin nhắn mới vào đầu danh sách
+                            $('#chatbox-messages').append($messageElement); 
+                            if (!message.is_read && message.sender_id == receiver_id && message.receiver_id == sender_id) {
+                                unreadCount++;
+                            }
                         });
-                        // scrollToBottom();
+                        updateUnreadCount();
                         $('#chatbox-messages').animate({ scrollTop: $('#chatbox-messages').scrollTop() + 100 }, 100);
                     } else {
                         const $errorMessageElement = $('<div></div>').text('Không thể tải tin nhắn').addClass('message error');
@@ -334,6 +368,28 @@
                     }
                     if (callback) callback();
                 }, 'json');
+            }
+
+            function readMessage(sender_id, receiver_id)
+            {
+                $.post('http://localhost/Chat-Box/read-messages.php', {
+                    sender_id: receiver_id,
+                    receiver_id: sender_id
+                }, function(response) {
+                    if (response.status === true) {
+                        unreadCount = 0;
+                        updateUnreadCount();
+                    }
+                }, 'json');
+            }
+
+            function updateUnreadCount() {
+                $('#unread-count').text(unreadCount);
+                if (unreadCount > 0) {
+                    $('#unread-count').show();
+                } else {
+                    $('#unread-count').hide();
+                }
             }
 
             function scrollToBottom() {
