@@ -369,7 +369,7 @@
                         let lastDate = null;
                         response.messages.forEach(function(message) {
                             const messageDate = new Date(message.created_at);
-                            const messageDateString = messageDate.toLocaleDateString();
+                            const messageDateString = formatDate(messageDate);
                             if (lastDate !== messageDateString) {
                                 const $dateElement = `
                                     <div class="message-date">
@@ -391,7 +391,7 @@
                             }
                         });
                         updateUnreadCount();
-                        $('#chatbox-messages').animate({ scrollTop: $('#chatbox-messages').scrollTop() + 100 }, 100);
+                        $('#chatbox-messages').animate({ scrollTop: $('#chatbox-messages').scrollTop() + 500 }, 100);
                     } else {
                         const $errorMessageElement = $('<div></div>').text('Không thể tải tin nhắn').addClass('message error');
                         $('#chatbox-messages').append($errorMessageElement);
@@ -425,6 +425,20 @@
             function scrollToBottom() {
                 const $chatboxMessages = $('#chatbox-messages');
                 $chatboxMessages.scrollTop($chatboxMessages[0].scrollHeight);
+            }
+
+            function formatDate(date) {
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+
+                if (date.toDateString() === today.toDateString()) {
+                    return "Hôm nay";
+                } else if (date.toDateString() === yesterday.toDateString()) {
+                    return "Hôm qua";
+                } else {
+                    return date.toLocaleDateString();
+                }
             }
         });
     </script>
