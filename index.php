@@ -170,7 +170,7 @@
             color: #888;
             font-size: 14px;
             background-color: #f1f1f1;
-            padding: 5px 10px;
+            padding: 5px 20px;
             border-radius: 10px;
         }
 
@@ -362,6 +362,7 @@
                     sender_id: sender_id
                 }, function(response) {
                     if (response.status === true) {
+                        const currentScrollHeight = $('#chatbox-messages')[0].scrollHeight;
                         $('#chatbox-messages').empty(); // Xóa các tin nhắn hiện tại
                         if (response.messages.length < limit) {
                             hasMoreMessages = false;
@@ -391,7 +392,8 @@
                             }
                         });
                         updateUnreadCount();
-                        $('#chatbox-messages').animate({ scrollTop: $('#chatbox-messages').scrollTop() + 500 }, 100);
+                        const newScrollHeight = $('#chatbox-messages')[0].scrollHeight;
+                        $('#chatbox-messages').scrollTop(newScrollHeight - currentScrollHeight);
                     } else {
                         const $errorMessageElement = $('<div></div>').text('Không thể tải tin nhắn').addClass('message error');
                         $('#chatbox-messages').append($errorMessageElement);
